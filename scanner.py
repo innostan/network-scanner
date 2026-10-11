@@ -1,6 +1,7 @@
 import socket
 import ipaddress
-
+import errno
+from service_detection import detect_service
 
 while True:
     target = input("Enter an IP address (or q to quit): ")
@@ -34,12 +35,36 @@ while True:
     except ValueError:
         print("that is not a valid port number. ")
         continue
-    for port in range(start_port, end_port + 1 ):
-        sock = socket.socket()
+
+    for port in range(start_port, end_port + 1):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(3)
-        result = sock.connect_ex((target,port))
+
+        try:
+            result = sock.connect_ex((target, port))
+        finally:
+            sock.close()
+
         if result == 0:
-            print(f"port {port} on target {target} is open.")
+            print(f"Port {port} on target {target} is OPEN")
+
+            service, banner = detect_service(target, port)
+            print(f"  Service: {service}")
+
+            if banner:
+                print(f"  Banner: {banner.splitlines()[0]}")
+
+        elif result == errno.ECONNREFUSED:
+            print(f"Port {port} on target {target} is CLOSED")
+
         else:
-            print(f"port {port} on target {target} is closed or unreachable ")
-        sock.close()
+            print(f"Port {port} on target {target} returned error {result}")
+    
+
+
+
+
+
+
+
+
